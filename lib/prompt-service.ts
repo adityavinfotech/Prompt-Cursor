@@ -1,8 +1,21 @@
 import { geminiService } from "./gemini"
 import type { Analysis, Question, Assumption, GeneratedPrompts } from "@/app/page"
 
+export interface RequirementFormData {
+  taskType?: string
+  goal?: string
+  components?: string[]
+  inputs?: string
+  outputs?: string
+  referenceFiles?: any
+  referenceUrls?: string[]
+  requirement?: string
+  context?: string
+}
+
 export interface PromptGenerationRequest {
   requirement: string
+  formData?: RequirementFormData
   analysis: Analysis
   answeredQuestions: Question[]
   acceptedAssumptions: Assumption[]
@@ -11,20 +24,46 @@ export interface PromptGenerationRequest {
 export class PromptService {
   async generateIDEPrompts({
     requirement,
+    formData,
     analysis,
     answeredQuestions,
     acceptedAssumptions,
   }: PromptGenerationRequest): Promise<GeneratedPrompts> {
+    // Build structured requirement from form data if available
+    let structuredRequirement = requirement
+    if (formData) {
+      const parts: string[] = []
+      if (formData.taskType) parts.push(`Task Type: ${formData.taskType}`)
+      if (formData.goal) parts.push(`Goal: ${formData.goal}`)
+      if (formData.components && formData.components.length > 0) {
+        parts.push(`Components/Files Affected: ${formData.components.join(', ')}`)
+      }
+      if (formData.inputs) parts.push(`Expected Inputs: ${formData.inputs}`)
+      if (formData.outputs) parts.push(`Expected Outputs: ${formData.outputs}`)
+      if (formData.referenceUrls && formData.referenceUrls.length > 0) {
+        parts.push(`Reference URLs: ${formData.referenceUrls.join(', ')}`)
+      }
+      if (formData.referenceFiles && formData.referenceFiles.length > 0) {
+        const fileNames = formData.referenceFiles.map((f: any) => f.name || f).join(', ')
+        parts.push(`Reference Files: ${fileNames}`)
+      }
+      
+      if (parts.length > 0) {
+        structuredRequirement = requirement 
+          ? `${requirement}\n\nStructured Details:\n${parts.join('\n')}`
+          : parts.join('\n')
+      }
+    }
     // Filter answered questions and accepted assumptions
     const relevantQuestions = answeredQuestions.filter(q => q.answer?.trim())
     const relevantAssumptions = acceptedAssumptions.filter(a => a.accepted)
 
     // Generate prompts for each IDE in parallel
     const [cursor, copilot, warp, windsurf] = await Promise.all([
-      this.generateCursorPrompt({ requirement, analysis, relevantQuestions, relevantAssumptions }),
-      this.generateCopilotPrompt({ requirement, analysis, relevantQuestions, relevantAssumptions }),
-      this.generateWarpPrompt({ requirement, analysis, relevantQuestions, relevantAssumptions }),
-      this.generateWindsurfPrompt({ requirement, analysis, relevantQuestions, relevantAssumptions }),
+      this.generateCursorPrompt({ requirement: structuredRequirement, analysis, relevantQuestions, relevantAssumptions }),
+      this.generateCopilotPrompt({ requirement: structuredRequirement, analysis, relevantQuestions, relevantAssumptions }),
+      this.generateWarpPrompt({ requirement: structuredRequirement, analysis, relevantQuestions, relevantAssumptions }),
+      this.generateWindsurfPrompt({ requirement: structuredRequirement, analysis, relevantQuestions, relevantAssumptions }),
     ])
 
     return { cursor, copilot, warp, windsurf }

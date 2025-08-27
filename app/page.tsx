@@ -1,23 +1,20 @@
 "use client"
 
-import { useState } from "react"
-import { Header } from "@/components/header"
-import { RequirementInput } from "@/components/requirement-input"
-import { AnalysisPanel } from "@/components/analysis-panel"
-import { PromptsPanel } from "@/components/prompts-panel"
-import { HistoryPanel } from "@/components/history-panel"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Brain, History, AlertCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { MultiStepForm } from "@/components/multi-step-form"
+import { TopNavigation } from "@/components/top-navigation"
 
-export interface Analysis {
-  goals: string[]
-  constraints: string[]
-  dependencies: string[]
-  edgeCases: string[]
-  acceptanceCriteria: string[]
-  questions: Question[]
-  assumptions: Assumption[]
+export interface RequirementFormData {
+  taskType?: string
+  goal?: string
+  components?: string[]
+  inputs?: string
+  outputs?: string
+  referenceFiles?: File[]
+  referenceUrls?: string[]
+  requirement?: string
+  context?: string
 }
 
 export interface Question {
@@ -32,6 +29,16 @@ export interface Assumption {
   text: string
   confidence: number
   accepted: boolean
+}
+
+export interface Analysis {
+  goals: string[]
+  constraints: string[]
+  dependencies: string[]
+  edgeCases: string[]
+  acceptanceCriteria: string[]
+  questions: Question[]
+  assumptions: Assumption[]
 }
 
 export interface GeneratedPrompts {
@@ -52,201 +59,109 @@ export interface Session {
   id: string
   timestamp: Date
   requirement: string
+  formData?: RequirementFormData
   analysis?: Analysis
   prompts?: GeneratedPrompts
   editedPrompts?: EditedPrompts
 }
 
 export default function Home() {
-  const [requirement, setRequirement] = useState("")
-  const [context, setContext] = useState("")
-  const [analysis, setAnalysis] = useState<Analysis | null>(null)
-  const [prompts, setPrompts] = useState<GeneratedPrompts | null>(null)
-  const [editedPrompts, setEditedPrompts] = useState<EditedPrompts>({})
-  const [sessions, setSessions] = useState<Session[]>([])
+  const router = useRouter()
+  const [formData, setFormData] = useState<RequirementFormData>({})
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [activeView, setActiveView] = useState<"main" | "history">("main")
-  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Load saved form data from localStorage
+    const savedFormData = localStorage.getItem("currentFormData")
+    if (savedFormData) {
+      try {
+        setFormData(JSON.parse(savedFormData))
+      } catch (error) {
+        console.error("Failed to parse saved form data:", error)
+      }
+    }
+  }, [])
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("currentFormData", JSON.stringify(formData))
+  }, [formData])
 
   const handleAnalyze = async () => {
-    if (!requirement.trim()) return
-
     setIsAnalyzing(true)
-    setError(null)
 
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ requirement, context }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to analyze requirement')
+      // Build requirement text from form data if needed
+      let requirementText = ""
+      if (formData.goal) {
+        const parts: string[] = []
+        if (formData.taskType) parts.push(`Task Type: ${formData.taskType}`)
+        if (formData.goal) parts.push(`Goal: ${formData.goal}`)
+        if (formData.components && formData.components.length > 0) {
+          parts.push(`Components/Files Affected: ${formData.components.join(', ')}`)
+        }
+        if (formData.inputs) parts.push(`Expected Inputs: ${formData.inputs}`)
+        if (formData.outputs) parts.push(`Expected Outputs: ${formData.outputs}`)
+        if (formData.referenceUrls && formData.referenceUrls.length > 0) {
+          parts.push(`Reference URLs: ${formData.referenceUrls.join(', ')}`)
+        }
+        if (formData.referenceFiles && formData.referenceFiles.length > 0) {
+          const fileNames = formData.referenceFiles.map(f => f.name).join(', ')
+          parts.push(`Reference Files: ${fileNames}`)
+        }
+        requirementText = parts.join('\n')
       }
 
-      setAnalysis(result.data)
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requirement: requirementText,
+          context: "",
+          formData,
+        }),
+      })
+
+      if (response.ok) {
+        const { data: analysis } = await response.json()
+        
+        // Save analysis and requirement data to localStorage
+        localStorage.setItem("currentAnalysis", JSON.stringify(analysis))
+        localStorage.setItem("currentRequirement", requirementText)
+        
+        // Navigate to analysis page
+        router.push("/analyse")
+      } else {
+        const error = await response.json()
+        console.error("Analysis failed:", error)
+        alert("Analysis failed. Please try again.")
+      }
     } catch (error) {
-      console.error('Analysis error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to analyze requirement. Please try again.')
+      console.error("Analysis error:", error)
+      alert("Analysis failed. Please try again.")
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  const handleGeneratePrompts = async () => {
-    if (!analysis) return
-
-    setIsGenerating(true)
-    setError(null)
-
-    try {
-      // Get answered questions and accepted assumptions
-      const answeredQuestions = analysis.questions.filter(q => q.answer?.trim())
-      const acceptedAssumptions = analysis.assumptions.filter(a => a.accepted)
-
-      const response = await fetch('/api/prompts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          requirement,
-          analysis,
-          answeredQuestions,
-          acceptedAssumptions,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate prompts')
-      }
-
-      setPrompts(result.data)
-
-      // Add to session history
-      const newSession: Session = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        requirement,
-        analysis,
-        prompts: result.data,
-        editedPrompts: {}, // Start with empty edited prompts
-      }
-      setSessions((prev) => [newSession, ...prev])
-    } catch (error) {
-      console.error('Prompt generation error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to generate prompts. Please try again.')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleUpdateAnalysis = (updatedAnalysis: Analysis) => {
-    setAnalysis(updatedAnalysis)
-    setPrompts(null) // Clear prompts when analysis changes
-    setEditedPrompts({}) // Clear edited prompts when analysis changes
-  }
-
-  const handleEditPrompt = (ideType: keyof GeneratedPrompts, editedContent: string) => {
-    setEditedPrompts(prev => ({
-      ...prev,
-      [ideType]: editedContent
-    }))
-  }
-
-  const handleImprovePrompt = (ideType: keyof GeneratedPrompts, improvedPrompt: string) => {
-    setEditedPrompts(prev => ({
-      ...prev,
-      [ideType]: improvedPrompt
-    }))
-  }
-
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-4 mb-6">
-          <Button
-            variant={activeView === "main" ? "default" : "outline"}
-            onClick={() => setActiveView("main")}
-            className="flex items-center gap-2"
-          >
-            <Brain className="h-4 w-4" />
-            Prompt Generator
-          </Button>
-          <Button
-            variant={activeView === "history" ? "default" : "outline"}
-            onClick={() => setActiveView("history")}
-            className="flex items-center gap-2"
-          >
-            <History className="h-4 w-4" />
-            History ({sessions.length})
-          </Button>
+      <TopNavigation currentStep="requirement" />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">AI Prompt Architect</h1>
+          <p className="text-muted-foreground">
+            Transform your ideas into structured, IDE-optimized prompts
+          </p>
         </div>
 
-        {activeView === "main" ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-6">
-              <RequirementInput
-                value={requirement}
-                onChange={setRequirement}
-                context={context}
-                onContextChange={setContext}
-                onAnalyze={handleAnalyze}
-                isAnalyzing={isAnalyzing}
-              />
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {analysis && (
-                <AnalysisPanel
-                  analysis={analysis}
-                  onUpdate={handleUpdateAnalysis}
-                  onGeneratePrompts={handleGeneratePrompts}
-                  isGenerating={isGenerating}
-                />
-              )}
-            </div>
-
-            <div>
-              {prompts && (
-                <PromptsPanel
-                  prompts={prompts}
-                  editedPrompts={editedPrompts}
-                  onEditPrompt={handleEditPrompt}
-                  onImprovePrompt={handleImprovePrompt}
-                  requirement={requirement}
-                  analysis={analysis}
-                />
-              )}
-            </div>
-          </div>
-        ) : (
-          <HistoryPanel
-            sessions={sessions}
-            onLoadSession={(session) => {
-              setRequirement(session.requirement)
-              setAnalysis(session.analysis || null)
-              setPrompts(session.prompts || null)
-              setEditedPrompts(session.editedPrompts || {})
-              setActiveView("main")
-            }}
-          />
-        )}
+        <MultiStepForm
+          formData={formData}
+          onFormDataChange={setFormData}
+          onSubmit={handleAnalyze}
+          isAnalyzing={isAnalyzing}
+        />
       </div>
     </div>
   )

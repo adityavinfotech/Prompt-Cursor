@@ -3,8 +3,21 @@ import { z } from "zod"
 import { promptService } from "@/lib/prompt-service"
 import { rateLimiter, GeminiError } from "@/lib/gemini"
 
+const requirementFormDataSchema = z.object({
+  taskType: z.string().optional(),
+  goal: z.string().optional(),
+  components: z.array(z.string()).optional(),
+  inputs: z.string().optional(),
+  outputs: z.string().optional(),
+  referenceFiles: z.any().optional(),
+  referenceUrls: z.array(z.string()).optional(),
+  requirement: z.string().optional(),
+  context: z.string().optional(),
+})
+
 const promptRequestSchema = z.object({
-  requirement: z.string().min(10, "Requirement must be at least 10 characters"),
+  requirement: z.string().optional(),
+  formData: requirementFormDataSchema.optional(),
   analysis: z.object({
     goals: z.array(z.string()),
     constraints: z.array(z.string()),
@@ -36,7 +49,22 @@ const promptRequestSchema = z.object({
     confidence: z.number(),
     accepted: z.boolean(),
   })),
-})
+}).refine(
+  (data) => {
+    // At least one of these must have content
+    const hasLegacyData = (data.requirement && data.requirement.trim().length >= 10)
+    const hasStructuredData = data.formData && (
+      data.formData.goal || 
+      data.formData.taskType || 
+      data.formData.inputs || 
+      data.formData.outputs
+    )
+    return hasLegacyData || hasStructuredData
+  },
+  {
+    message: "Either requirement text (min 10 chars) or structured form data must be provided"
+  }
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +82,8 @@ export async function POST(request: NextRequest) {
     const validatedData = promptRequestSchema.parse(body)
 
     const prompts = await promptService.generateIDEPrompts({
-      requirement: validatedData.requirement,
+      requirement: validatedData.requirement || "",
+      formData: validatedData.formData,
       analysis: validatedData.analysis,
       answeredQuestions: validatedData.answeredQuestions,
       acceptedAssumptions: validatedData.acceptedAssumptions,

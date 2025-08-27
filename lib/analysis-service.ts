@@ -4,14 +4,74 @@ import { promptConfig } from "./prompt-config"
 import { logPromptUsage } from "./telemetry"
 import type { Analysis, Question, Assumption } from "@/app/page"
 
+export interface RequirementFormData {
+  taskType?: string
+  goal?: string
+  components?: string[]
+  inputs?: string
+  outputs?: string
+  referenceFiles?: File[]
+  referenceUrls?: string[]
+  requirement?: string
+  context?: string
+}
+
 export interface AnalysisRequest {
   requirement: string
+  formData?: RequirementFormData
 }
 
 export interface AnalysisResponse extends Analysis {}
 
 export class AnalysisService {
-  async analyzeRequirement(requirement: string, context: string = ""): Promise<Analysis> {
+  async analyzeRequirement(
+    requirement: string, 
+    context: string = "", 
+    formData?: RequirementFormData
+  ): Promise<Analysis> {
+    // Build structured requirement text from form data
+    let structuredRequirement = requirement
+    
+    if (formData) {
+      const parts: string[] = []
+      
+      if (formData.taskType) {
+        parts.push(`Task Type: ${formData.taskType}`)
+      }
+      
+      if (formData.goal) {
+        parts.push(`Goal: ${formData.goal}`)
+      }
+      
+      if (formData.components && formData.components.length > 0) {
+        parts.push(`Components/Files Affected: ${formData.components.join(", ")}`)
+      }
+      
+      if (formData.inputs) {
+        parts.push(`Expected Inputs: ${formData.inputs}`)
+      }
+      
+      if (formData.outputs) {
+        parts.push(`Expected Outputs: ${formData.outputs}`)
+      }
+      
+      if (formData.referenceUrls && formData.referenceUrls.length > 0) {
+        parts.push(`Reference URLs: ${formData.referenceUrls.join(", ")}`)
+      }
+      
+      if (formData.referenceFiles && formData.referenceFiles.length > 0) {
+        const fileNames = formData.referenceFiles.map(f => f.name).join(", ")
+        parts.push(`Reference Files: ${fileNames}`)
+      }
+      
+      if (parts.length > 0) {
+        const structuredPart = parts.join("\n")
+        structuredRequirement = requirement 
+          ? `${requirement}\n\nStructured Details:\n${structuredPart}`
+          : structuredPart
+      }
+    }
+
     // If supplemental context is very large (e.g. repository markdown), summarize first
     let summarizedContext = context
     if (context && context.length > 16000) {
@@ -48,7 +108,7 @@ ${context}`
 }`
 
     const prompt = buildAnalysisPrompt({
-      requirement,
+      requirement: structuredRequirement,
       context: summarizedContext,
       jsonSchema,
     })
@@ -111,7 +171,9 @@ Dependencies: ${currentAnalysis.dependencies.join(", ")}`
 
     const jsonSchema = `{"questions":[{"id":"string","text":"string","priority":"critical|important|nice-to-have"}]}`
 
-    const prompt = `${SYSTEM_RULES}\n${QUESTIONS_INSTRUCT}
+    const prompt = `You are an expert software architect and requirements analyst.
+
+Generate additional clarifying questions for the given requirement based on the current analysis and already answered questions.
 
 REQUIREMENT:
 ${requirement}
@@ -124,7 +186,8 @@ ${answeredQuestionsText}
 
 SCHEMA:
 ${jsonSchema}
-\nRespond with valid JSON only, matching the schema exactly.`
+
+Respond with valid JSON only, matching the schema exactly.`
 
     try {
       const response = await geminiService.generateStructuredResponse<{ questions: Question[] }>(prompt)
@@ -165,7 +228,9 @@ Acceptance Criteria: ${currentAnalysis.acceptanceCriteria.join(", ")}`
 
     const jsonSchema = `{"goals":["string"],"constraints":["string"],"dependencies":["string"],"edgeCases":["string"],"acceptanceCriteria":["string"]}`
 
-    const prompt = `${SYSTEM_RULES}\n${REFINE_INSTRUCT}
+    const prompt = `You are an expert software architect and requirements analyst.
+
+Refine the current analysis based on new information from answered questions and accepted assumptions.
 
 REQUIREMENT:
 ${requirement}
@@ -181,7 +246,8 @@ ${acceptedAssumptionsText}
 
 SCHEMA:
 ${jsonSchema}
-\nRespond with valid JSON only, matching the schema exactly.`
+
+Respond with valid JSON only, matching the schema exactly.`
 
     try {
       const response = await geminiService.generateStructuredResponse<Partial<Analysis>>(prompt)

@@ -3,17 +3,45 @@ import { z } from "zod"
 import { analysisService } from "@/lib/analysis-service"
 import { rateLimiter, GeminiError } from "@/lib/gemini"
 
+const requirementFormDataSchema = z.object({
+  taskType: z.string().optional(),
+  goal: z.string().optional(),
+  components: z.array(z.string()).optional(),
+  inputs: z.string().optional(),
+  outputs: z.string().optional(),
+  referenceFiles: z.any().optional(), // Files will be handled separately
+  referenceUrls: z.array(z.string().url()).optional(),
+  requirement: z.string().optional(),
+  context: z.string().optional(),
+})
+
 const analyzeRequestSchema = z.object({
   requirement: z
     .string()
-    .min(10, "Requirement must be at least 10 characters")
-    .max(200000, "Requirement must be less than 200k characters"),
+    .max(200000, "Requirement must be less than 200k characters")
+    .optional(),
   context: z
     .string()
     .max(200000, "Context must be less than 200k characters")
     .optional()
     .or(z.literal("").optional()),
-})
+  formData: requirementFormDataSchema.optional(),
+}).refine(
+  (data) => {
+    // At least one of these must have content
+    const hasLegacyData = (data.requirement && data.requirement.trim().length >= 10)
+    const hasStructuredData = data.formData && (
+      data.formData.goal || 
+      data.formData.taskType || 
+      data.formData.inputs || 
+      data.formData.outputs
+    )
+    return hasLegacyData || hasStructuredData
+  },
+  {
+    message: "Either requirement text (min 10 chars) or structured form data must be provided"
+  }
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +58,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = analyzeRequestSchema.parse(body)
 
-    const analysis = await analysisService.analyzeRequirement(validatedData.requirement, validatedData.context || "")
+    const analysis = await analysisService.analyzeRequirement(
+      validatedData.requirement || "", 
+      validatedData.context || "",
+      validatedData.formData
+    )
 
     return NextResponse.json({ 
       success: true,
