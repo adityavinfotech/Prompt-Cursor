@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Copy, Download, Edit, Save, X, Sparkles, CheckCircle, Code, Terminal, Zap } from "lucide-react"
 import type { GeneratedPrompts, EditedPrompts, Analysis } from "@/app/page"
-import { ImprovePromptDialog } from "@/components/improve-prompt-dialog"
+import { ImprovePromptInputDialog } from "@/components/improve-prompt-input-dialog"
 
 const IDE_OPTIONS = [
   { value: "cursor", label: "Cursor IDE" },
@@ -382,7 +382,7 @@ export default function PromptsPage() {
         </div>
       </div>
 
-      <ImprovePromptDialog
+      <ImprovePromptInputDialog
         open={improveDialogOpen}
         onOpenChange={setImproveDialogOpen}
         originalPrompt={currentImproveIde ? getCurrentContent(currentImproveIde) : ""}
