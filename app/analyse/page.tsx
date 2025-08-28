@@ -26,6 +26,7 @@ export default function AnalysePage() {
   const [formData, setFormData] = useState<RequirementFormData>({})
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false)
   const [activeTab, setActiveTab] = useState("analysis")
   
   // Use the iterations hook for enhanced state management
@@ -172,6 +173,8 @@ export default function AnalysePage() {
   const handleGeneratePrompts = async () => {
     if (!analysis) return
 
+    setIsGeneratingPrompts(true)
+    
     try {
       const response = await fetch("/api/prompts", {
         method: "POST",
@@ -188,10 +191,25 @@ export default function AnalysePage() {
       if (response.ok) {
         const { data: prompts } = await response.json()
         localStorage.setItem("currentPrompts", JSON.stringify(prompts))
+        
+        toast({
+          title: "Prompts Generated",
+          description: "IDE-specific prompts have been generated successfully!"
+        })
+        
         router.push("/prompts")
+      } else {
+        throw new Error("Failed to generate prompts")
       }
     } catch (error) {
       console.error("Failed to generate prompts:", error)
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate IDE prompts. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsGeneratingPrompts(false)
     }
   }
 
@@ -300,7 +318,7 @@ export default function AnalysePage() {
                 analysis={analysis}
                 onUpdate={handleAnalysisUpdate}
                 onGeneratePrompts={handleGeneratePrompts}
-                isGenerating={false}
+                isGenerating={isGeneratingPrompts}
               />
             </div>
             
