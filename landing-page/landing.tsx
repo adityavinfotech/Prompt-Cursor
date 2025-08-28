@@ -4,66 +4,6 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Sparkles, Code, Zap, Users, Shield, Rocket } from "lucide-react"
 import Link from "next/link"
 
-export interface RequirementFormData {
-  taskType?: string
-  goal?: string
-  components?: string[]
-  inputs?: string
-  outputs?: string
-  referenceFiles?: File[]
-  referenceUrls?: string[]
-  requirement?: string
-  context?: string
-}
-
-export interface Question {
-  id: string
-  text: string
-  priority: "critical" | "important" | "nice-to-have"
-  answer?: string
-}
-
-export interface Assumption {
-  id: string
-  text: string
-  confidence: number
-  accepted: boolean
-}
-
-export interface Analysis {
-  goals: string[]
-  constraints: string[]
-  dependencies: string[]
-  edgeCases: string[]
-  acceptanceCriteria: string[]
-  questions: Question[]
-  assumptions: Assumption[]
-}
-
-export interface GeneratedPrompts {
-  cursor: string
-  copilot: string
-  warp: string
-  windsurf: string
-}
-
-export interface EditedPrompts {
-  cursor?: string
-  copilot?: string
-  warp?: string
-  windsurf?: string
-}
-
-export interface Session {
-  id: string
-  timestamp: Date
-  requirement: string
-  formData?: RequirementFormData
-  analysis?: Analysis
-  prompts?: GeneratedPrompts
-  editedPrompts?: EditedPrompts
-}
-
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background dark:bg-gradient-to-br dark:from-background dark:via-background dark:to-purple-950/20">
@@ -83,11 +23,9 @@ export default function LandingPage() {
             <Link href="/app" className="text-sm hover:text-primary transition-colors">
               Pricing
             </Link>
-            <Link href="/app">
-              <Button size="sm" className="rounded-full">
-                Get Started
-              </Button>
-            </Link>
+            <Button size="sm" className="rounded-full">
+              Get Started
+            </Button>
           </div>
         </div>
       </nav>
