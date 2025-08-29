@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { promptService } from "@/lib/prompt-service"
 import { rateLimiter, GeminiError } from "@/lib/gemini"
+import { openaiRateLimiter, OpenAIError } from "@/lib/openai"
+import { AIError } from "@/lib/ai-service"
 
 const requirementFormDataSchema = z.object({
   taskType: z.string().optional(),
@@ -49,6 +51,7 @@ const promptRequestSchema = z.object({
     confidence: z.number(),
     accepted: z.boolean(),
   })),
+  provider: z.enum(["gemini", "openai"]).optional().default("gemini"),
 }).refine(
   (data) => {
     // At least one of these must have content
@@ -68,18 +71,22 @@ const promptRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting check
-    if (!rateLimiter.canMakeRequest()) {
+    // Parse request first so we know the provider (defaults to gemini)
+    const body = await request.json()
+    const validatedData = promptRequestSchema.parse(body)
+
+    // Rate limiting check based on provider
+    const isGemini = validatedData.provider === "gemini"
+    const rateLimiterToUse = isGemini ? rateLimiter : openaiRateLimiter
+    
+    if (!rateLimiterToUse.canMakeRequest()) {
       return NextResponse.json(
         { error: "Too many requests. Please wait before trying again." },
         { status: 429 }
       )
     }
 
-    rateLimiter.recordRequest()
-
-    const body = await request.json()
-    const validatedData = promptRequestSchema.parse(body)
+    rateLimiterToUse.recordRequest()
 
     const prompts = await promptService.generateIDEPrompts({
       requirement: validatedData.requirement || "",
@@ -87,6 +94,7 @@ export async function POST(request: NextRequest) {
       analysis: validatedData.analysis,
       answeredQuestions: validatedData.answeredQuestions,
       acceptedAssumptions: validatedData.acceptedAssumptions,
+      provider: validatedData.provider,
     })
 
     return NextResponse.json({ 
@@ -104,7 +112,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (error instanceof GeminiError) {
+    if (error instanceof GeminiError || error instanceof OpenAIError || error instanceof AIError) {
       const statusCode = error.code === "RATE_LIMIT" ? 429 : 
                         error.code === "UNAUTHORIZED" ? 401 :
                         error.code === "FORBIDDEN" ? 403 : 500

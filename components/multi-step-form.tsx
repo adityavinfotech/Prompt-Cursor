@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Upload, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+// import removed: large provider toggle UI
+import { AIProvider, AI_PROVIDERS } from "@/lib/ai-types"
 import type { RequirementFormData } from "@/app/page"
 
 interface MultiStepFormProps {
@@ -15,6 +17,8 @@ interface MultiStepFormProps {
   onFormDataChange: (data: RequirementFormData) => void
   onSubmit: () => void
   isAnalyzing: boolean
+  aiProvider?: AIProvider
+  onAIProviderChange?: (provider: AIProvider) => void
 }
 
 const TASK_TYPES = [
@@ -39,7 +43,14 @@ const FORM_STEPS = [
   { id: 4, title: "References", description: "Add supporting materials" },
 ]
 
-export function MultiStepForm({ formData, onFormDataChange, onSubmit, isAnalyzing }: MultiStepFormProps) {
+export function MultiStepForm({ 
+  formData, 
+  onFormDataChange, 
+  onSubmit, 
+  isAnalyzing, 
+  aiProvider = AI_PROVIDERS.GEMINI,
+  onAIProviderChange 
+}: MultiStepFormProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [componentInput, setComponentInput] = useState("")
 
@@ -375,8 +386,26 @@ export function MultiStepForm({ formData, onFormDataChange, onSubmit, isAnalyzin
         </div>
       </div>
 
+      {/* Minimal LLM dropdown moved inside the form card below */}
+
       {/* Form Content */}
       <div className="bg-card rounded-lg border shadow-sm p-6 mb-6">
+        {onAIProviderChange && (
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>LLM:</span>
+              <Select value={aiProvider} onValueChange={(v) => onAIProviderChange(v as AIProvider)}>
+                <SelectTrigger className="h-8 w-[180px] px-2 text-xs">
+                  <SelectValue placeholder="Choose model" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={AI_PROVIDERS.GEMINI}>Google Gemini — fast, concise</SelectItem>
+                  <SelectItem value={AI_PROVIDERS.OPENAI}>OpenAI GPT-4 — accurate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
         <div className="transition-all duration-300 ease-in-out">
           {renderStep()}
         </div>

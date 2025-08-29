@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -27,6 +27,12 @@ export function EditSection({
 }: EditSectionProps) {
   const [editedAnalysis, setEditedAnalysis] = useState<Analysis>(analysis)
   const [hasChanges, setHasChanges] = useState(false)
+
+  // Keep local editable copy in sync if the upstream analysis changes
+  useEffect(() => {
+    setEditedAnalysis(analysis)
+    setHasChanges(false)
+  }, [analysis])
 
   const updateField = (field: keyof Analysis, value: any) => {
     setEditedAnalysis(prev => ({ ...prev, [field]: value }))

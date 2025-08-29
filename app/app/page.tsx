@@ -4,18 +4,22 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { MultiStepForm } from "@/components/multi-step-form"
 import { TopNavigation } from "@/components/top-navigation"
+import { AIProvider, AI_PROVIDERS } from "@/lib/ai-types"
 import type { RequirementFormData } from "@/app/page"
 
 export default function AppPage() {
   const router = useRouter()
   const [formData, setFormData] = useState<RequirementFormData>({})
+  const [aiProvider, setAIProvider] = useState<AIProvider>(AI_PROVIDERS.GEMINI)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
-    // Load saved form data from localStorage
+    // Load saved form data and AI provider from localStorage
     const savedFormData = localStorage.getItem("currentFormData")
+    const savedAIProvider = localStorage.getItem("currentAIProvider")
+    
     if (savedFormData) {
       try {
         setFormData(JSON.parse(savedFormData))
@@ -23,14 +27,24 @@ export default function AppPage() {
         console.error("Failed to parse saved form data:", error)
       }
     }
+    
+    if (savedAIProvider && (savedAIProvider === AI_PROVIDERS.GEMINI || savedAIProvider === AI_PROVIDERS.OPENAI)) {
+      setAIProvider(savedAIProvider as AIProvider)
+    }
   }, [])
 
-  // Save form data to localStorage whenever it changes
+  // Save form data and AI provider to localStorage whenever they change
   useEffect(() => {
     if (isMounted) {
       localStorage.setItem("currentFormData", JSON.stringify(formData))
     }
   }, [formData, isMounted])
+
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem("currentAIProvider", aiProvider)
+    }
+  }, [aiProvider, isMounted])
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true)
@@ -64,6 +78,7 @@ export default function AppPage() {
           requirement: requirementText,
           context: "",
           formData,
+          provider: aiProvider,
         }),
       })
 
@@ -127,6 +142,8 @@ export default function AppPage() {
           onFormDataChange={setFormData}
           onSubmit={handleAnalyze}
           isAnalyzing={isAnalyzing}
+          aiProvider={aiProvider}
+          onAIProviderChange={setAIProvider}
         />
       </div>
     </div>

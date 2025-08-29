@@ -1,4 +1,4 @@
-import { geminiService } from "./gemini"
+import { aiService, AIProvider } from "./ai-service"
 import type { Analysis, Question, Assumption, GeneratedPrompts } from "@/app/page"
 
 export interface RequirementFormData {
@@ -19,6 +19,7 @@ export interface PromptGenerationRequest {
   analysis: Analysis
   answeredQuestions: Question[]
   acceptedAssumptions: Assumption[]
+  provider?: AIProvider
 }
 
 export class PromptService {
@@ -28,6 +29,7 @@ export class PromptService {
     analysis,
     answeredQuestions,
     acceptedAssumptions,
+    provider = "gemini",
   }: PromptGenerationRequest): Promise<GeneratedPrompts> {
     // Build structured requirement from form data if available
     let structuredRequirement = requirement
@@ -58,6 +60,9 @@ export class PromptService {
     const relevantQuestions = answeredQuestions.filter(q => q.answer?.trim())
     const relevantAssumptions = acceptedAssumptions.filter(a => a.accepted)
 
+    // Set the provider before generating prompts
+    aiService.setProvider(provider)
+    
     // Generate prompts for each IDE in parallel
     const [cursor, copilot, warp, windsurf] = await Promise.all([
       this.generateCursorPrompt({ requirement: structuredRequirement, analysis, relevantQuestions, relevantAssumptions }),
@@ -112,7 +117,7 @@ Generate a Cursor-optimized prompt that includes:
 
 Format the response as a well-structured prompt that a developer could paste directly into Cursor IDE. Use markdown formatting for better readability.`
 
-    return await geminiService.generateResponse(prompt)
+    return await aiService.generateResponse(prompt)
   }
 
   private async generateCopilotPrompt({
@@ -157,7 +162,7 @@ Generate a Copilot-optimized prompt that includes:
 
 Format as a direct, actionable prompt that will help Copilot generate accurate code suggestions. Keep it focused and specific.`
 
-    return await geminiService.generateResponse(prompt)
+    return await aiService.generateResponse(prompt)
   }
 
   private async generateWarpPrompt({
@@ -203,7 +208,7 @@ Generate a Warp-optimized prompt that includes:
 
 Format as a terminal-focused guide that emphasizes command-line tools, scripts, and development workflow automation.`
 
-    return await geminiService.generateResponse(prompt)
+    return await aiService.generateResponse(prompt)
   }
 
   private async generateWindsurfPrompt({
@@ -249,7 +254,7 @@ Generate a Windsurf-optimized prompt that includes:
 
 Format as a comprehensive project brief that covers architecture, implementation strategy, and collaborative development considerations. Emphasize system design and best practices.`
 
-    return await geminiService.generateResponse(prompt)
+    return await aiService.generateResponse(prompt)
   }
 
   async generateCustomPrompt(
@@ -289,7 +294,7 @@ Generate a prompt tailored for ${ideType} that includes:
 
 Format the response appropriately for ${ideType}'s workflow and capabilities.`
 
-    return await geminiService.generateResponse(prompt)
+    return await aiService.generateResponse(prompt)
   }
 
   async improvePrompt({
@@ -332,7 +337,7 @@ Generate an improved version of the prompt that:
 
 Return only the improved prompt without additional commentary.`
 
-    return await geminiService.generateResponse(prompt)
+    return await aiService.generateResponse(prompt)
   }
 }
 

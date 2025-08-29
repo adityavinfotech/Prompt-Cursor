@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { analysisService } from "@/lib/analysis-service"
 import { rateLimiter, GeminiError } from "@/lib/gemini"
+import { openaiRateLimiter, OpenAIError } from "@/lib/openai"
+import { AIError } from "@/lib/ai-service"
 import type { Analysis } from "@/app/page"
 
 const requirementFormDataSchema = z.object({
@@ -72,6 +74,7 @@ const analyzeRequestSchema = z.object({
     .or(z.literal("").optional()),
   formData: requirementFormDataSchema.optional(),
   iterationData: iterationDataSchema,
+  provider: z.enum(["gemini", "openai"]).optional().default("gemini"),
 }).refine(
   (data) => {
     // For iterations, we need previous analysis
@@ -96,18 +99,22 @@ const analyzeRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting check
-    if (!rateLimiter.canMakeRequest()) {
+    // Parse request first so we can determine provider (defaults to gemini)
+    const body = await request.json()
+    const validatedData = analyzeRequestSchema.parse(body)
+
+    // Rate limiting check based on provider
+    const isGemini = validatedData.provider === "gemini"
+    const rateLimiterToUse = isGemini ? rateLimiter : openaiRateLimiter
+    
+    if (!rateLimiterToUse.canMakeRequest()) {
       return NextResponse.json(
         { error: "Too many requests. Please wait before trying again." },
         { status: 429 }
       )
     }
 
-    rateLimiter.recordRequest()
-
-    const body = await request.json()
-    const validatedData = analyzeRequestSchema.parse(body)
+    rateLimiterToUse.recordRequest()
 
     let analysis: Analysis
     
@@ -127,7 +134,8 @@ export async function POST(request: NextRequest) {
       analysis = await analysisService.analyzeRequirement(
         validatedData.requirement || "", 
         validatedData.context || "",
-        validatedData.formData
+        validatedData.formData,
+        validatedData.provider
       )
     }
 
@@ -157,7 +165,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (error instanceof GeminiError) {
+    if (error instanceof GeminiError || error instanceof OpenAIError || error instanceof AIError) {
       const statusCode = error.code === "RATE_LIMIT" ? 429 : 
                         error.code === "UNAUTHORIZED" ? 401 :
                         error.code === "FORBIDDEN" ? 403 : 500

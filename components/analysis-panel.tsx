@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +20,11 @@ interface AnalysisPanelProps {
 
 export function AnalysisPanel({ analysis, onUpdate, onGeneratePrompts, isGenerating }: AnalysisPanelProps) {
   const [localAnalysis, setLocalAnalysis] = useState(analysis)
+
+  // Keep local state in sync when parent analysis changes (e.g., after edits or iterations)
+  useEffect(() => {
+    setLocalAnalysis(analysis)
+  }, [analysis])
 
   const handleQuestionAnswer = (questionId: string, answer: string) => {
     const updatedQuestions = localAnalysis.questions.map((q) => (q.id === questionId ? { ...q, answer } : q))

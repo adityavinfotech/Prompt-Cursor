@@ -1,4 +1,4 @@
-import { geminiService } from "./gemini"
+import { aiService, AIProvider } from "./ai-service"
 import { buildAnalysisPrompt } from "./prompt-templates"
 import { promptConfig } from "./prompt-config"
 import { logPromptUsage } from "./telemetry"
@@ -27,7 +27,8 @@ export class AnalysisService {
   async analyzeRequirement(
     requirement: string, 
     context: string = "", 
-    formData?: RequirementFormData
+    formData?: RequirementFormData,
+    provider: AIProvider = "gemini"
   ): Promise<Analysis> {
     // Build structured requirement text from form data
     let structuredRequirement = requirement
@@ -91,7 +92,9 @@ INPUT CONTEXT:
 ${context}`
 
       try {
-        summarizedContext = await geminiService.generateResponse(summarizationPrompt)
+        // Set the provider before generating response
+        aiService.setProvider(provider)
+        summarizedContext = await aiService.generateResponse(summarizationPrompt)
       } catch (e) {
         summarizedContext = context
       }
@@ -115,7 +118,9 @@ ${context}`
 
     try {
       const t0 = Date.now()
-      const response = await geminiService.generateStructuredResponse<AnalysisResponse>(prompt)
+      // Set the provider before generating response
+      aiService.setProvider(provider)
+      const response = await aiService.generateStructuredResponse<AnalysisResponse>(prompt)
       
       // Validate and ensure all required fields are present
       const analysis: Analysis = {
@@ -190,7 +195,7 @@ ${jsonSchema}
 Respond with valid JSON only, matching the schema exactly.`
 
     try {
-      const response = await geminiService.generateStructuredResponse<{ questions: Question[] }>(prompt)
+      const response = await aiService.generateStructuredResponse<{ questions: Question[] }>(prompt)
       
       return (response.questions || []).map((q, index) => ({
         id: q.id || `new_q${Date.now()}_${index}`,
@@ -250,7 +255,7 @@ ${jsonSchema}
 Respond with valid JSON only, matching the schema exactly.`
 
     try {
-      const response = await geminiService.generateStructuredResponse<Partial<Analysis>>(prompt)
+      const response = await aiService.generateStructuredResponse<Partial<Analysis>>(prompt)
       return response
     } catch (error) {
       console.error("Error refining analysis:", error)
@@ -329,7 +334,7 @@ INPUT CONTEXT:
 ${context}`
 
       try {
-        summarizedContext = await geminiService.generateResponse(summarizationPrompt)
+        summarizedContext = await aiService.generateResponse(summarizationPrompt)
       } catch (e) {
         summarizedContext = context
       }
@@ -405,7 +410,7 @@ Respond with valid JSON only, matching the schema exactly. Make this iteration m
 
     try {
       const t0 = Date.now()
-      const response = await geminiService.generateStructuredResponse<AnalysisResponse>(prompt)
+      const response = await aiService.generateStructuredResponse<AnalysisResponse>(prompt)
       
       // Validate and ensure all required fields are present
       const analysis: Analysis = {

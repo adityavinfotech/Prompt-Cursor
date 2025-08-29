@@ -17,6 +17,11 @@ Generate optimized prompts for popular AI development tools:
 - **Warp Terminal**: Command-line and workflow-focused instructions
 - **Windsurf**: Comprehensive architecture and design-focused prompts
 
+### 🤖 Dual AI Provider Support
+Choose between two powerful AI models:
+- **Google Gemini**: Fast, cost-effective analysis with good performance
+- **OpenAI GPT-4**: Premium quality with advanced reasoning capabilities
+
 ### 💡 User Experience
 - **Real-time Validation**: Input validation with character limits and feedback
 - **Session Management**: Save and restore previous analyses
@@ -35,10 +40,12 @@ Generate optimized prompts for popular AI development tools:
 - **Theme**: next-themes for dark/light mode switching
 
 ### Backend & AI
-- **LLM Provider**: Google Gemini AI (gemini-1.5-flash model)
+- **LLM Providers**: 
+  - Google Gemini AI (gemini-1.5-flash model)
+  - OpenAI GPT-4 (gpt-4o-mini model)
 - **API Routes**: Next.js API routes for server-side processing
 - **Validation**: Zod for request/response validation
-- **Rate Limiting**: Built-in rate limiting (10 requests/minute)
+- **Rate Limiting**: Built-in rate limiting (10 requests/minute per provider)
 - **Error Handling**: Comprehensive error boundaries and user feedback
 
 ## Installation & Setup
@@ -47,6 +54,7 @@ Generate optimized prompts for popular AI development tools:
 - Node.js 18+ 
 - npm or yarn package manager
 - Google AI Studio account and API key
+- OpenAI account and API key (optional, for GPT-4 support)
 
 ### 1. Clone and Install Dependencies
 ```bash
@@ -61,12 +69,20 @@ Create a `.env.local` file in the root directory:
 # Gemini API Configuration
 GEMINI_API_KEY=your_gemini_api_key_here
 
+# OpenAI API Configuration (optional)
+OPENAI_API_KEY=your_openai_api_key_here
+
 # Next.js Configuration (optional)
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 **Getting your Gemini API Key:**
 1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a new API key
+3. Copy and paste it into your `.env.local` file
+
+**Getting your OpenAI API Key:**
+1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
 2. Create a new API key
 3. Copy and paste it into your `.env.local` file
 

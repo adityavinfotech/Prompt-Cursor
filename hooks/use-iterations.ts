@@ -6,6 +6,7 @@ interface UseIterationsProps {
   initialAnalysis?: Analysis
   requirement: string
   formData?: any
+  aiProvider?: string
 }
 
 interface UseIterationsReturn {
@@ -31,7 +32,8 @@ interface UseIterationsReturn {
 export function useIterations({ 
   initialAnalysis, 
   requirement, 
-  formData 
+  formData,
+  aiProvider 
 }: UseIterationsProps): UseIterationsReturn {
   const [iterations, setIterations] = useState<AnalysisIteration[]>([])
   const [currentIteration, setCurrentIteration] = useState(0)
@@ -91,10 +93,13 @@ export function useIterations({
         body: JSON.stringify({
           requirement,
           formData,
-          previousAnalysis: iterations[currentIteration].analysis,
-          iterationNumber: iterations.length + 1,
-          userFeedback: feedbackToUse || undefined,
-          isIteration: true
+          provider: aiProvider || "gemini",
+          iterationData: {
+            previousAnalysis: iterations[currentIteration].analysis,
+            userEdits: (iterations[currentIteration] as any).userEdits,
+            userFeedback: feedbackToUse || undefined,
+            iterationNumber: iterations.length + 1,
+          },
         })
       })
 

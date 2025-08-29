@@ -9,11 +9,13 @@ import { TopNavigation } from "@/components/top-navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { useIterations } from "@/hooks/use-iterations"
 import { compareAnalyses, getIterationSummary, calculateIterationMetrics } from "@/lib/iteration-utils"
 import { Loader2, RefreshCw, CheckCircle2, TrendingUp, Download, AlertCircle } from "lucide-react"
+import { AIProvider, AI_PROVIDERS } from "@/lib/ai-types"
 import type { Analysis, RequirementFormData } from "@/app/page"
 
 export default function AnalysePage() {
@@ -24,6 +26,7 @@ export default function AnalysePage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
   const [requirement, setRequirement] = useState("")
   const [formData, setFormData] = useState<RequirementFormData>({})
+  const [aiProvider, setAIProvider] = useState<AIProvider>(AI_PROVIDERS.GEMINI)
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false)
@@ -44,13 +47,14 @@ export default function AnalysePage() {
     saveCurrentIteration,
     canIterate,
     getIterationStats
-  } = useIterations({ initialAnalysis: analysis || undefined, requirement, formData })
+  } = useIterations({ initialAnalysis: analysis || undefined, requirement, formData, aiProvider })
 
   useEffect(() => {
     // Load data from localStorage
     const savedAnalysis = localStorage.getItem("currentAnalysis")
     const savedRequirement = localStorage.getItem("currentRequirement")
     const savedFormData = localStorage.getItem("currentFormData")
+    const savedAIProvider = localStorage.getItem("currentAIProvider")
 
     if (savedAnalysis) {
       setAnalysis(JSON.parse(savedAnalysis))
@@ -60,6 +64,9 @@ export default function AnalysePage() {
     }
     if (savedFormData) {
       setFormData(JSON.parse(savedFormData))
+    }
+    if (savedAIProvider && (savedAIProvider === AI_PROVIDERS.GEMINI || savedAIProvider === AI_PROVIDERS.OPENAI)) {
+      setAIProvider(savedAIProvider as AIProvider)
     }
 
     setIsLoading(false)
@@ -88,6 +95,17 @@ export default function AnalysePage() {
     
     const updatedAnalysis = { ...analysis, ...editedAnalysis }
     handleAnalysisUpdate(updatedAnalysis)
+    // Persist user edits on the current iteration so the next iteration incorporates them
+    try {
+      const savedIterations = localStorage.getItem("currentIterations")
+      if (savedIterations) {
+        const parsed = JSON.parse(savedIterations)
+        if (parsed?.[currentIteration]) {
+          parsed[currentIteration].userEdits = editedAnalysis
+          localStorage.setItem("currentIterations", JSON.stringify(parsed))
+        }
+      }
+    } catch {}
     
     toast({
       title: "Analysis Updated",
@@ -185,6 +203,7 @@ export default function AnalysePage() {
           analysis,
           answeredQuestions: analysis.questions.filter(q => q.answer?.trim()),
           acceptedAssumptions: analysis.assumptions.filter(a => a.accepted),
+          provider: aiProvider,
         }),
       })
 
@@ -247,9 +266,19 @@ export default function AnalysePage() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Analysis Results</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Review and refine your requirement analysis
           </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
+            <span className="text-muted-foreground">Powered by</span>
+            <Badge variant="outline" className={cn(
+              aiProvider === AI_PROVIDERS.GEMINI 
+                ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-800"
+                : "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
+            )}>
+              {aiProvider === AI_PROVIDERS.GEMINI ? "🤖 Google Gemini" : "🧠 OpenAI GPT-4"}
+            </Badge>
+          </div>
         </div>
 
         {/* Iteration Stats */}
