@@ -138,6 +138,15 @@ export function IterationDisplay({
                 isActive ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
               }`}
               onClick={() => onSelectIteration(index)}
+              role="button"
+              tabIndex={0}
+              aria-label={`Select iteration ${iteration.iterationNumber}, ${status.text}, created ${formatTimestamp(iteration.timestamp)}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onSelectIteration(index)
+                }
+              }}
             >
               {/* Timeline connector */}
               {index < iterations.length - 1 && (

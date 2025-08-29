@@ -75,18 +75,25 @@ export function useIterations({
   // Save iterations to localStorage whenever they change
   useEffect(() => {
     if (iterations.length > 0) {
-      localStorage.setItem("currentIterations", JSON.stringify(iterations))
-      localStorage.setItem("currentIterationIndex", currentIteration.toString())
+      try {
+        localStorage.setItem("currentIterations", JSON.stringify(iterations))
+        localStorage.setItem("currentIterationIndex", currentIteration.toString())
+      } catch (storageError) {
+        console.warn("Failed to save to localStorage:", storageError)
+      }
     }
   }, [iterations, currentIteration])
 
   const createIteration = useCallback(async (feedback?: string): Promise<boolean> => {
     if (!iterations[currentIteration] || isIterating) return false
-
+    
     setIsIterating(true)
     const feedbackToUse = feedback || userFeedback.trim()
-
+    
     try {
+      const currentIterationData = iterations[currentIteration]
+      const userEdits = currentIterationData.userEdits || undefined
+      
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,18 +102,17 @@ export function useIterations({
           formData,
           provider: aiProvider || "gemini",
           iterationData: {
-            previousAnalysis: iterations[currentIteration].analysis,
-            userEdits: (iterations[currentIteration] as any).userEdits,
+            previousAnalysis: currentIterationData.analysis,
+            userEdits,
             userFeedback: feedbackToUse || undefined,
             iterationNumber: iterations.length + 1,
           },
-        })
+        }),
       })
 
       if (response.ok) {
         const { data: newAnalysis } = await response.json()
         
-        // Create new iteration
         const newIteration: AnalysisIteration = {
           id: `iter_${Date.now()}`,
           timestamp: new Date(),
@@ -124,12 +130,19 @@ export function useIterations({
         setUserFeedback("")
         setHasUnsavedChanges(false)
         
-        // Update current analysis in localStorage
-        localStorage.setItem("currentAnalysis", JSON.stringify(newAnalysis))
+        // Improved localStorage error handling
+        try {
+          localStorage.setItem("currentAnalysis", JSON.stringify(newAnalysis))
+          localStorage.setItem("currentIterations", JSON.stringify(updatedIterations))
+        } catch (storageError) {
+          console.warn("Failed to save to localStorage:", storageError)
+          // Continue execution - don't fail the entire operation
+        }
         
         return true
       } else {
-        console.error("Failed to create iteration:", await response.text())
+        const errorText = await response.text()
+        console.error("Failed to create iteration:", errorText)
         return false
       }
     } catch (error) {
@@ -138,7 +151,7 @@ export function useIterations({
     } finally {
       setIsIterating(false)
     }
-  }, [iterations, currentIteration, isIterating, userFeedback, requirement, formData])
+  }, [iterations, currentIteration, isIterating, userFeedback, requirement, formData, aiProvider])
 
   const selectIteration = useCallback((index: number) => {
     if (index >= 0 && index < iterations.length && index !== currentIteration) {
@@ -146,7 +159,11 @@ export function useIterations({
       setHasUnsavedChanges(false)
       
       // Update current analysis in localStorage
-      localStorage.setItem("currentAnalysis", JSON.stringify(iterations[index].analysis))
+      try {
+        localStorage.setItem("currentAnalysis", JSON.stringify(iterations[index].analysis))
+      } catch (storageError) {
+        console.warn("Failed to save to localStorage:", storageError)
+      }
     }
   }, [iterations, currentIteration])
 
@@ -171,13 +188,20 @@ export function useIterations({
       updatedIterations[currentIteration] = {
         ...updatedIterations[currentIteration],
         analysis,
+        timestamp: new Date(), // Update timestamp to reflect the edit
         userEdits: analysis // Mark as user-edited
       }
       setIterations(updatedIterations)
       setHasUnsavedChanges(false)
       
-      // Update current analysis in localStorage
-      localStorage.setItem("currentAnalysis", JSON.stringify(analysis))
+      // Update both current analysis and iterations in localStorage immediately
+      try {
+        localStorage.setItem("currentAnalysis", JSON.stringify(analysis))
+        localStorage.setItem("currentIterations", JSON.stringify(updatedIterations))
+        localStorage.setItem("currentIterationIndex", currentIteration.toString())
+      } catch (storageError) {
+        console.warn("Failed to save to localStorage:", storageError)
+      }
     }
   }, [iterations, currentIteration])
 

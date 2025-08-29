@@ -22,9 +22,14 @@ export function AnalysisPanel({ analysis, onUpdate, onGeneratePrompts, isGenerat
   const [localAnalysis, setLocalAnalysis] = useState(analysis)
 
   // Keep local state in sync when parent analysis changes (e.g., after edits or iterations)
+  // Only update if there are actual structural changes, not just user interactions
   useEffect(() => {
-    setLocalAnalysis(analysis)
-  }, [analysis])
+    // Only sync if the analysis has meaningfully changed (not just user input changes)
+    const hasStructuralChanges = JSON.stringify(analysis) !== JSON.stringify(localAnalysis)
+    if (hasStructuralChanges) {
+      setLocalAnalysis(analysis)
+    }
+  }, [analysis]) // Removed localAnalysis from deps to prevent infinite loops
 
   const handleQuestionAnswer = (questionId: string, answer: string) => {
     const updatedQuestions = localAnalysis.questions.map((q) => (q.id === questionId ? { ...q, answer } : q))

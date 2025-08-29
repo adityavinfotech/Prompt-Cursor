@@ -104,7 +104,19 @@ export function EditSection({
   }
 
   const handleSave = () => {
-    onSave(editedAnalysis)
+    // Filter out empty items before saving
+    const cleanedAnalysis = {
+      ...editedAnalysis,
+      goals: editedAnalysis.goals.filter(item => item.trim() !== ''),
+      constraints: editedAnalysis.constraints.filter(item => item.trim() !== ''),
+      dependencies: editedAnalysis.dependencies.filter(item => item.trim() !== ''),
+      edgeCases: editedAnalysis.edgeCases.filter(item => item.trim() !== ''),
+      acceptanceCriteria: editedAnalysis.acceptanceCriteria.filter(item => item.trim() !== ''),
+      questions: editedAnalysis.questions.filter(q => q.text.trim() !== ''),
+      assumptions: editedAnalysis.assumptions.filter(a => a.text.trim() !== '')
+    }
+    
+    onSave(cleanedAnalysis)
     setHasChanges(false)
     onToggleEdit()
   }
