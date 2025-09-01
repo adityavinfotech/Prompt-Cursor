@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "backendAuthType": "public",
+  "executionArgs": {
+    "projectName": "Prompt-Cursor",
+    "projectPath": "c:\\Users\\Aditya\\Desktop\\Prompt-Cursor",
+    "testIds": [],
+    "additionalInstruction": "Focus on testing the core AI Prompt Architect functionality including multi-step form, analysis generation, iteration system, and IDE-specific prompt generation. Test both light and dark themes.",
+    "envs": {
+      "API_KEY": "sk-user-JTqOcjKtpjPiZL3xCkCdmrtLguwS0nfCKYhAGrixsOwpheRrYbyA1ekH9aUjrOgXh-eFd8Y6ySTHBEQcVSh8lnlusMQEXAzX_tPQ2_uKSU5Pj4AQcq50tPtRR6qIke5kOrs"
+    }
+  }
+}

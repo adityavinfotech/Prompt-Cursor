@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation"
 import { AnalysisPanel } from "@/components/analysis-panel"
 import { EditSection } from "@/components/edit-section"
 import { IterationDisplay, type AnalysisIteration } from "@/components/iteration-display"
+import { IterationTimeline } from "@/components/iteration-timeline"
+import { GuidedFeedback } from "@/components/guided-feedback"
 import { TopNavigation } from "@/components/top-navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { useIterations } from "@/hooks/use-iterations"
 import { compareAnalyses, getIterationSummary, calculateIterationMetrics } from "@/lib/iteration-utils"
-import { Loader2, RefreshCw, CheckCircle2, TrendingUp, Download, AlertCircle } from "lucide-react"
+import { Loader2, RefreshCw, CheckCircle2, Download } from "lucide-react"
 import { AIProvider, AI_PROVIDERS } from "@/lib/ai-types"
 import type { Analysis, RequirementFormData } from "@/app/page"
 
@@ -285,84 +285,40 @@ export default function AnalysePage() {
       <TopNavigation currentStep="analyse" />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Analysis Results</h1>
-          <p className="text-muted-foreground mb-4">
-            Review and refine your requirement analysis
+          <h1 className="text-2xl font-semibold mb-2">Analysis</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            Review and refine your analysis
           </p>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
-            <span className="text-muted-foreground">Powered by</span>
-            <Badge variant="outline" className={cn(
-              aiProvider === AI_PROVIDERS.GEMINI 
-                ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-800"
-                : "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800"
-            )}>
-              {aiProvider === AI_PROVIDERS.GEMINI ? "🤖 Google Gemini" : "🧠 OpenAI GPT-4"}
-            </Badge>
-          </div>
         </div>
 
-        {/* Iteration Stats */}
-        {iterations.length > 0 && (
-          <div className="bg-card rounded-lg border p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-sm">
-                  <span className="font-medium">Iteration:</span>
-                  <Badge variant="outline" className="ml-2">
-                    {getIterationStats().current} of {getIterationStats().total}
-                  </Badge>
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Satisfied:</span>
-                  <Badge variant={getIterationStats().satisfied > 0 ? "default" : "secondary"} className="ml-2">
-                    {getIterationStats().satisfied}
-                  </Badge>
-                </div>
-                {hasUnsavedChanges && (
-                  <Alert className="py-2 px-3 w-auto">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="text-sm ml-2">
-                      You have unsaved changes
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportHistory}
-                  disabled={iterations.length === 0}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Export
-                </Button>
-              </div>
-            </div>
+        {/* Simplified Iteration Timeline */}
+        <IterationTimeline 
+          iterations={iterations}
+          currentIteration={currentIteration}
+          onSelectIteration={handleSelectIteration}
+        />
+
+        {/* Simplified Alert */}
+        {hasUnsavedChanges && (
+          <div className="text-sm text-amber-600 dark:text-amber-400 mb-6 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-md">
+            Unsaved changes will be included in the next iteration
           </div>
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="analysis">Analysis</TabsTrigger>
-            <TabsTrigger value="edit" className="relative">
+          <TabsList className="grid w-full grid-cols-3 h-9">
+            <TabsTrigger value="analysis" className="text-sm">Analysis</TabsTrigger>
+            <TabsTrigger value="edit" className="text-sm relative">
               Edit
               {hasUnsavedChanges && (
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full" />
+                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-amber-500 rounded-full" />
               )}
             </TabsTrigger>
-            <TabsTrigger value="history" className="relative">
-              History
-              {iterations.length > 1 && (
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  {iterations.length}
-                </Badge>
-              )}
-            </TabsTrigger>
+            <TabsTrigger value="history" className="text-sm">History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="analysis" className="space-y-6">
-            <div className="bg-card rounded-lg border shadow-sm">
+            <div className="bg-card rounded-lg border">
               <AnalysisPanel
                 analysis={analysis}
                 onUpdate={handleAnalysisUpdate}
@@ -371,95 +327,60 @@ export default function AnalysePage() {
               />
             </div>
             
-            {/* Enhanced Iteration Controls */}
-            <div className="bg-card rounded-lg border shadow-sm p-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium flex items-center gap-2">
-                      Iteration Controls
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {iterations[currentIteration] ? getIterationSummary(iterations[currentIteration]) : 'No iteration data'}
-                    </p>
+            {/* Simplified Iteration Controls */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">Refine Analysis</h3>
+                {iterations[currentIteration]?.isUserSatisfied ? (
+                  <div className="flex items-center gap-1 text-sm text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Complete
                   </div>
-                  <div className="flex items-center gap-2">
-                    {iterations[currentIteration]?.isUserSatisfied ? (
-                      <Badge variant="default" className="bg-green-600">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Satisfied
-                      </Badge>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleMarkSatisfied}
-                        disabled={!canIterate()}
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-1" />
-                        Mark as Satisfied
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Iteration Metrics */}
-                {iterations.length > 1 && (
-                  <div className="bg-muted/50 p-3 rounded-md">
-                    <div className="text-xs text-muted-foreground mb-2">Iteration Metrics:</div>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <div className="font-medium">{calculateIterationMetrics(iterations).totalIterations}</div>
-                        <div className="text-xs text-muted-foreground">Total</div>
-                      </div>
-                      <div>
-                        <div className="font-medium">{calculateIterationMetrics(iterations).satisfiedIterations}</div>
-                        <div className="text-xs text-muted-foreground">Satisfied</div>
-                      </div>
-                      <div>
-                        <div className="font-medium">{calculateIterationMetrics(iterations).averageItemsPerIteration}</div>
-                        <div className="text-xs text-muted-foreground">Avg Items</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Feedback for next iteration (optional):</label>
-                  <textarea
-                    value={userFeedback}
-                    onChange={(e) => setUserFeedback(e.target.value)}
-                    placeholder="Describe what you'd like to improve or refine..."
-                    className="w-full p-2 border rounded-md text-sm min-h-[80px] resize-none"
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMarkSatisfied}
                     disabled={!canIterate()}
-                  />
-                </div>
-                
-                <Button
-                  onClick={handleIterate}
-                  disabled={!canIterate()}
-                  className="w-full"
-                >
-                  {isIterating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Iteration...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Create New Iteration
-                    </>
-                  )}
-                </Button>
-                
-                {!canIterate() && iterations[currentIteration]?.isUserSatisfied && (
-                  <p className="text-sm text-muted-foreground text-center">
-                    This iteration is marked as satisfied. No further iterations needed.
-                  </p>
+                    className="h-8 text-xs"
+                  >
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Mark Complete
+                  </Button>
                 )}
               </div>
+              
+              <GuidedFeedback
+                value={userFeedback}
+                onChange={setUserFeedback}
+                disabled={!canIterate()}
+              />
+              
+              <Button
+                onClick={handleIterate}
+                disabled={!canIterate()}
+                className="w-full h-10"
+              >
+                {isIterating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Create Iteration {iterations.length + 1}
+                  </>
+                )}
+              </Button>
+              
+              {!canIterate() && iterations[currentIteration]?.isUserSatisfied && (
+                <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-md">
+                  <div className="text-sm text-green-700 dark:text-green-300">
+                    Analysis complete! Ready to generate prompts.
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -474,12 +395,27 @@ export default function AnalysePage() {
           </TabsContent>
 
           <TabsContent value="history">
-            <IterationDisplay
-              iterations={iterations}
-              currentIteration={currentIteration}
-              onSelectIteration={handleSelectIteration}
-              onCompareIterations={handleCompareIterations}
-            />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium">Version History</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportHistory}
+                  disabled={iterations.length === 0}
+                  className="h-8 text-xs"
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Export
+                </Button>
+              </div>
+              <IterationDisplay
+                iterations={iterations}
+                currentIteration={currentIteration}
+                onSelectIteration={handleSelectIteration}
+                onCompareIterations={handleCompareIterations}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
