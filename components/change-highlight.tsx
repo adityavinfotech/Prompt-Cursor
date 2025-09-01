@@ -166,7 +166,7 @@ export function AnalysisComparison({ before, after, className }: AnalysisCompari
       <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <ArrowRight className="h-4 w-4" />
-          <span>Changes from previous iteration</span>
+          <span>Side-by-side comparison</span>
         </div>
         <div className="flex items-center gap-2">
           {totalChanges.added > 0 && (
@@ -195,15 +195,117 @@ export function AnalysisComparison({ before, after, className }: AnalysisCompari
           <div className="text-sm">No changes detected in this iteration</div>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {sections.map((section) => (
-            <ChangeHighlight 
-              key={section.title}
-              title={section.title} 
-              before={section.before} 
-              after={section.after} 
-            />
-          ))}
+        <div className="overflow-hidden rounded-lg border border-border">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="text-left p-4 font-medium text-sm w-1/6">Section</th>
+                <th className="text-left p-4 font-medium text-sm w-5/12 border-l border-border">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">Previous</Badge>
+                    Before Changes
+                  </div>
+                </th>
+                <th className="text-left p-4 font-medium text-sm w-5/12 border-l border-border">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="text-xs">Current</Badge>
+                    After Changes
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((section, index) => {
+                const changes = detectChanges(section.before, section.after)
+                const hasChanges = changes.some(c => c.type !== 'unchanged')
+                const addedCount = changes.filter(c => c.type === 'added').length
+                const removedCount = changes.filter(c => c.type === 'removed').length
+                
+                return (
+                  <tr key={section.title} className={cn(
+                    "border-b border-border last:border-b-0",
+                    hasChanges ? "bg-background" : "bg-muted/20"
+                  )}>
+                    <td className="p-4 align-top border-r border-border">
+                      <div className="space-y-2">
+                        <div className="font-medium text-sm">{section.title}</div>
+                        {hasChanges && (
+                          <div className="flex flex-col gap-1">
+                            {addedCount > 0 && (
+                              <Badge variant="outline" className="text-xs text-green-700 border-green-300 bg-green-50 dark:bg-green-950/30 dark:text-green-300 dark:border-green-700 w-fit">
+                                <Plus className="h-2.5 w-2.5 mr-1" />
+                                +{addedCount}
+                              </Badge>
+                            )}
+                            {removedCount > 0 && (
+                              <Badge variant="outline" className="text-xs text-red-700 border-red-300 bg-red-50 dark:bg-red-950/30 dark:text-red-300 dark:border-red-700 w-fit">
+                                <Minus className="h-2.5 w-2.5 mr-1" />
+                                -{removedCount}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 align-top border-r border-border">
+                      <div className="space-y-2">
+                        {section.before && section.before.length > 0 ? (
+                          section.before.map((item, itemIndex) => {
+                            const isRemoved = !section.after?.includes(item)
+                            return (
+                              <div
+                                key={itemIndex}
+                                className={cn(
+                                  "p-2 rounded text-sm border-l-2",
+                                  isRemoved 
+                                    ? "bg-red-50 border-l-red-400 text-red-800 dark:bg-red-950/20 dark:text-red-200 dark:border-l-red-400 line-through opacity-75" 
+                                    : "bg-muted/30 border-l-muted-foreground/30 text-foreground"
+                                )}
+                              >
+                                <div className="flex items-start gap-2">
+                                  {isRemoved && <Minus className="h-3 w-3 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />}
+                                  <span className="leading-relaxed">{item}</span>
+                                </div>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <div className="text-sm text-muted-foreground italic p-2">No items</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 align-top">
+                      <div className="space-y-2">
+                        {section.after && section.after.length > 0 ? (
+                          section.after.map((item, itemIndex) => {
+                            const isAdded = !section.before?.includes(item)
+                            return (
+                              <div
+                                key={itemIndex}
+                                className={cn(
+                                  "p-2 rounded text-sm border-l-2",
+                                  isAdded 
+                                    ? "bg-green-50 border-l-green-400 text-green-800 dark:bg-green-950/20 dark:text-green-200 dark:border-l-green-400" 
+                                    : "bg-muted/30 border-l-muted-foreground/30 text-foreground"
+                                )}
+                              >
+                                <div className="flex items-start gap-2">
+                                  {isAdded && <Plus className="h-3 w-3 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />}
+                                  <span className="leading-relaxed">{item}</span>
+                                </div>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <div className="text-sm text-muted-foreground italic p-2">No items</div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
