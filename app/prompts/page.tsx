@@ -150,6 +150,9 @@ export default function PromptsPage() {
     localStorage.removeItem("currentFormData")
     localStorage.removeItem("currentPrompts")
     localStorage.removeItem("currentEditedPrompts")
+    localStorage.removeItem("currentIterations")
+    localStorage.removeItem("currentIterationIndex")
+    localStorage.removeItem("currentAIProvider")
     router.push("/")
   }
 

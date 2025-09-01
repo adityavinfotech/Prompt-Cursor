@@ -1,8 +1,11 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Sparkles, Code, Zap, Users, Shield, Rocket } from "lucide-react"
+import { ArrowRight, Sparkles, Code, Zap, Users, Shield, Rocket, Moon, Sun } from "lucide-react"
 import Link from "next/link"
+import { useTheme } from "next-themes"
 
 export interface RequirementFormData {
   taskType?: string
@@ -65,6 +68,8 @@ export interface Session {
 }
 
 export default function LandingPage() {
+  const { theme, setTheme } = useTheme()
+
   return (
     <div className="min-h-screen bg-background dark:bg-gradient-to-br dark:from-background dark:via-background dark:to-purple-950/20">
       {/* Glassmorphism Navigation */}
@@ -83,6 +88,14 @@ export default function LandingPage() {
             <Link href="/app" className="text-sm hover:text-primary transition-colors">
               Pricing
             </Link>
+            <button
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              className="p-2 rounded-full hover:bg-white/10 dark:hover:bg-black/10 transition-colors relative"
+              aria-label="Toggle theme"
+            >
+              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute top-2 left-2 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </button>
             <Link href="/app">
               <Button size="sm" className="rounded-full">
                 Get Started
@@ -256,7 +269,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="text-center text-sm text-muted-foreground mt-8">
-            © 2024 AI Prompt Architect. All rights reserved.
+            2024 AI Prompt Architect. All rights reserved.
           </div>
         </div>
       </footer>
