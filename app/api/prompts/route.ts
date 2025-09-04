@@ -12,6 +12,11 @@ const requirementFormDataSchema = z.object({
   inputs: z.string().optional(),
   outputs: z.string().optional(),
   referenceFiles: z.any().optional(),
+  referenceFileContents: z.array(z.object({
+    name: z.string(),
+    content: z.string(),
+    type: z.string()
+  })).optional(),
   referenceUrls: z.array(z.string()).optional(),
   requirement: z.string().optional(),
   context: z.string().optional(),

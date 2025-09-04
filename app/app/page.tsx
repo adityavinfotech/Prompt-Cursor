@@ -68,6 +68,18 @@ export default function AppPage() {
           const fileNames = formData.referenceFiles.map((f: File) => f.name).join(', ')
           parts.push(`Reference Files: ${fileNames}`)
         }
+        if (formData.referenceFileContents && formData.referenceFileContents.length > 0) {
+          parts.push(`\nFile Contents:`)
+          formData.referenceFileContents.forEach(fileContent => {
+            if (fileContent.content && fileContent.content !== `[Image file: ${fileContent.name}]`) {
+              parts.push(`\n--- ${fileContent.name} ---`)
+              parts.push(fileContent.content)
+              parts.push(`--- End of ${fileContent.name} ---\n`)
+            } else {
+              parts.push(`\n${fileContent.content}`)
+            }
+          })
+        }
         requirementText = parts.join('\n')
       }
 

@@ -19,6 +19,7 @@ interface RequirementFormData {
   outputs?: string
   referenceFiles?: File[]
   referenceUrls?: string[]
+  referenceFileContents?: { name: string; content: string; type: string }[]
   // Legacy support
   requirement?: string
   context?: string
@@ -80,6 +81,7 @@ export function RequirementInput({
   const handleFileUpload = async (files: FileList) => {
     setUploadError(null)
     const validFiles: File[] = []
+    const fileContents: { name: string; content: string; type: string }[] = []
     
     for (const file of Array.from(files)) {
       const lowerName = file.name.toLowerCase()
@@ -97,12 +99,44 @@ export function RequirementInput({
       }
       
       validFiles.push(file)
+      
+      // Read file content for text files
+      if (isCodeFile) {
+        try {
+          const content = await file.text()
+          // Limit content size to prevent token overflow (max ~50k chars per file)
+          const truncatedContent = content.length > 50000 
+            ? content.substring(0, 50000) + "\n... [Content truncated due to size]"
+            : content
+          
+          fileContents.push({
+            name: file.name,
+            content: truncatedContent,
+            type: file.type || 'text/plain'
+          })
+        } catch (error) {
+          console.error(`Failed to read file ${file.name}:`, error)
+          setUploadError(`Failed to read file: ${file.name}`)
+          continue
+        }
+      } else if (isImageFile) {
+        // For images, just store metadata (AI can't process image content yet)
+        fileContents.push({
+          name: file.name,
+          content: `[Image file: ${file.name}]`,
+          type: file.type || 'image/*'
+        })
+      }
     }
     
     if (validFiles.length > 0) {
       const newFiles = [...uploadedFiles, ...validFiles]
+      const existingContents = formData.referenceFileContents || []
+      const newContents = [...existingContents, ...fileContents]
+      
       setUploadedFiles(newFiles)
       handleFormDataChange("referenceFiles", newFiles)
+      handleFormDataChange("referenceFileContents", newContents)
     }
   }
 

@@ -1,4 +1,5 @@
-import { aiService, AIProvider } from "./ai-service"
+import { aiService } from "./ai-service"
+import { AIProvider } from "./ai-types"
 import type { Analysis, Question, Assumption, GeneratedPrompts } from "@/app/page"
 
 export interface RequirementFormData {
@@ -8,6 +9,7 @@ export interface RequirementFormData {
   inputs?: string
   outputs?: string
   referenceFiles?: any
+  referenceFileContents?: { name: string; content: string; type: string }[]
   referenceUrls?: string[]
   requirement?: string
   context?: string

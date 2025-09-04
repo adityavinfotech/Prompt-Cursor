@@ -1,4 +1,5 @@
-import { aiService, AIProvider } from "./ai-service"
+import { aiService } from "./ai-service"
+import { AIProvider } from "./ai-types"
 import { buildAnalysisPrompt } from "./prompt-templates"
 import { promptConfig } from "./prompt-config"
 import { logPromptUsage } from "./telemetry"
@@ -11,6 +12,7 @@ export interface RequirementFormData {
   inputs?: string
   outputs?: string
   referenceFiles?: File[]
+  referenceFileContents?: { name: string; content: string; type: string }[]
   referenceUrls?: string[]
   requirement?: string
   context?: string

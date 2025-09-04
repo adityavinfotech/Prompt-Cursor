@@ -88,10 +88,45 @@ export function MultiStepForm({
     })
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
+    const fileContents: { name: string; content: string; type: string }[] = []
+    
+    // Read file contents
+    for (const file of files) {
+      const lowerName = file.name.toLowerCase()
+      const isCodeFile = [".py", ".js", ".ts", ".jsx", ".tsx", ".md", ".txt"].some(ext => lowerName.endsWith(ext))
+      const isImageFile = [".jpg", ".jpeg", ".png", ".svg"].some(ext => lowerName.endsWith(ext))
+      
+      if (isCodeFile) {
+        try {
+          const content = await file.text()
+          // Limit content size to prevent token overflow
+          const truncatedContent = content.length > 50000 
+            ? content.substring(0, 50000) + "\n... [Content truncated due to size]"
+            : content
+          
+          fileContents.push({
+            name: file.name,
+            content: truncatedContent,
+            type: file.type || 'text/plain'
+          })
+        } catch (error) {
+          console.error(`Failed to read file ${file.name}:`, error)
+        }
+      } else if (isImageFile) {
+        fileContents.push({
+          name: file.name,
+          content: `[Image file: ${file.name}]`,
+          type: file.type || 'image/*'
+        })
+      }
+    }
+    
+    const existingContents = formData.referenceFileContents || []
     updateFormData({
-      referenceFiles: [...(formData.referenceFiles || []), ...files]
+      referenceFiles: [...(formData.referenceFiles || []), ...files],
+      referenceFileContents: [...existingContents, ...fileContents]
     })
   }
 

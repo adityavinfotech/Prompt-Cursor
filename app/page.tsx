@@ -14,6 +14,7 @@ export interface RequirementFormData {
   inputs?: string
   outputs?: string
   referenceFiles?: File[]
+  referenceFileContents?: { name: string; content: string; type: string }[]
   referenceUrls?: string[]
   requirement?: string
   context?: string
