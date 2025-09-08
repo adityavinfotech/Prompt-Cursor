@@ -2,13 +2,16 @@
 
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { RotateCcw } from "lucide-react"
+import { clearAllSessionData } from "@/lib/session-utils"
 
 interface TopNavigationProps {
   currentStep: "requirement" | "analyse" | "prompt"
 }
 
 const NAVIGATION_STEPS = [
-  { key: "requirement", label: "Requirement", path: "/" },
+  { key: "requirement", label: "Requirement", path: "/app" },
   { key: "analyse", label: "Analyse", path: "/analyse" },
   { key: "prompt", label: "Prompt", path: "/prompts" },
 ] as const
@@ -28,6 +31,15 @@ export function TopNavigation({ currentStep }: TopNavigationProps) {
     // Only allow navigation to completed steps or current step
     if (stepIndex <= currentIndex) {
       router.push(step.path)
+    }
+  }
+
+  const handleNewSession = () => {
+    if (confirm("Start a new session? This will clear all current data.")) {
+      clearAllSessionData()
+      router.push("/app")
+      // Force page reload to clear all state
+      window.location.reload()
     }
   }
 
@@ -73,9 +85,20 @@ export function TopNavigation({ currentStep }: TopNavigationProps) {
             })}
           </div>
 
-          {/* Progress Indicator */}
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <span>Step {currentIndex + 1} of {NAVIGATION_STEPS.length}</span>
+          {/* New Session Button and Progress */}
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNewSession}
+              className="flex items-center space-x-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>New Session</span>
+            </Button>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <span>Step {currentIndex + 1} of {NAVIGATION_STEPS.length}</span>
+            </div>
           </div>
         </div>
       </div>
