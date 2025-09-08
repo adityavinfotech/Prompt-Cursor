@@ -39,8 +39,21 @@ Refine analysis based on new answers/assumptions. Return only fields that materi
 Do not regress previously accepted items. Preserve voice/format. JSON only.
 `
 
+export const CODE_QUALITY_INSTRUCTION = `
+IMPORTANT - CODE QUALITY FOCUS:
+Do not make any changes to the application's core logic, architecture, or data flow structure. Focus only on improving code quality in specific files and sections by enhancing:
+• Code readability and maintainability
+• Performance optimizations within existing functions
+• Error handling and validation improvements
+• Code organization and consistent patterns
+• Documentation and type safety
+• Refactoring without changing functionality
+
+Preserve all existing functionality, API contracts, business logic, and application behavior.
+`
+
 export function buildAnalysisPrompt({ requirement, context, jsonSchema }: { requirement: string; context?: string; jsonSchema: string }) {
-  return `${SYSTEM_RULES}\n${ANALYSIS_INSTRUCT}
+  return `${SYSTEM_RULES}\n${ANALYSIS_INSTRUCT}\n${CODE_QUALITY_INSTRUCTION}
 
 REQUIREMENT:
 ${requirement}
@@ -54,7 +67,7 @@ ${jsonSchema}
 }
 
 export function buildQuestionsPrompt({ requirement, currentAnalysis, answeredQuestionsSchema }: { requirement: string; currentAnalysis: string; answeredQuestionsSchema: string }) {
-  return `${SYSTEM_RULES}\n${QUESTIONS_INSTRUCT}
+  return `${SYSTEM_RULES}\n${QUESTIONS_INSTRUCT}\n${CODE_QUALITY_INSTRUCTION}
 
 REQUIREMENT:
 ${requirement}
@@ -68,7 +81,7 @@ ${answeredQuestionsSchema}
 }
 
 export function buildRefinePrompt({ requirement, currentAnalysis, answered, accepted, jsonSchema }: { requirement: string; currentAnalysis: string; answered: string; accepted: string; jsonSchema: string }) {
-  return `${SYSTEM_RULES}\n${REFINE_INSTRUCT}
+  return `${SYSTEM_RULES}\n${REFINE_INSTRUCT}\n${CODE_QUALITY_INSTRUCTION}
 
 REQUIREMENT:
 ${requirement}
@@ -86,5 +99,3 @@ SCHEMA:
 ${jsonSchema}
 \nRespond with valid JSON only, matching the schema exactly.`
 }
-
-

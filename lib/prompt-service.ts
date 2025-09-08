@@ -1,5 +1,6 @@
 import { aiService } from "./ai-service"
 import { AIProvider } from "./ai-types"
+import { CODE_QUALITY_INSTRUCTION } from "./prompt-templates"
 import type { Analysis, Question, Assumption, GeneratedPrompts } from "@/app/page"
 
 export interface RequirementFormData {
@@ -96,7 +97,9 @@ export class PromptService {
       : ""
 
     const prompt = `
-Create a comprehensive Cursor IDE prompt for implementing the following feature. Cursor works best with detailed context, step-by-step implementation plans, and clear structure.
+Create a Cursor IDE prompt optimized for code generation. Cursor works best with concise, specific instructions and clear technical requirements.
+
+${CODE_QUALITY_INSTRUCTION}
 
 ORIGINAL REQUIREMENT:
 ${requirement}
@@ -109,15 +112,14 @@ ANALYSIS RESULTS:
 • Acceptance Criteria: ${analysis.acceptanceCriteria.join(', ')}${questionsContext}${assumptionsContext}
 
 Generate a Cursor-optimized prompt that includes:
-1. Clear goal statement
-2. Technical context and framework assumptions
-3. Detailed implementation plan with numbered steps
-4. Code structure recommendations
-5. Testing approach
-6. Error handling considerations
-7. Expected output format
+1. Concise goal statement
+2. Technical specifications
+3. Implementation steps
+4. Key constraints and requirements
+5. Expected behavior description
+6. Code generation guidance
 
-Format the response as a well-structured prompt that a developer could paste directly into Cursor IDE. Use markdown formatting for better readability.`
+Format as a direct, actionable prompt that will help Cursor generate accurate code suggestions. Keep it focused and specific.`
 
     return await aiService.generateResponse(prompt)
   }
@@ -143,6 +145,8 @@ Format the response as a well-structured prompt that a developer could paste dir
 
     const prompt = `
 Create a GitHub Copilot prompt optimized for code generation. Copilot works best with concise, specific instructions and clear technical requirements.
+
+${CODE_QUALITY_INSTRUCTION}
 
 ORIGINAL REQUIREMENT:
 ${requirement}
@@ -187,7 +191,9 @@ Format as a direct, actionable prompt that will help Copilot generate accurate c
       : ""
 
     const prompt = `
-Create a Warp terminal-focused prompt for implementing the following feature. Warp excels at command-line operations, environment setup, and development workflows.
+Create a Warp terminal prompt optimized for code generation. Warp works best with concise, specific instructions and clear technical requirements.
+
+${CODE_QUALITY_INSTRUCTION}
 
 ORIGINAL REQUIREMENT:
 ${requirement}
@@ -200,15 +206,14 @@ ANALYSIS RESULTS:
 • Acceptance Criteria: ${analysis.acceptanceCriteria.join(', ')}${questionsContext}${assumptionsContext}
 
 Generate a Warp-optimized prompt that includes:
-1. Objective statement
-2. Environment setup requirements
-3. Command-line workflow steps
-4. Development tasks breakdown
-5. Testing commands
-6. Deployment considerations
-7. Required environment variables or configuration
+1. Concise goal statement
+2. Technical specifications
+3. Implementation steps
+4. Key constraints and requirements
+5. Expected behavior description
+6. Code generation guidance
 
-Format as a terminal-focused guide that emphasizes command-line tools, scripts, and development workflow automation.`
+Format as a direct, actionable prompt that will help Warp generate accurate code suggestions. Keep it focused and specific.`
 
     return await aiService.generateResponse(prompt)
   }
@@ -233,7 +238,9 @@ Format as a terminal-focused guide that emphasizes command-line tools, scripts, 
       : ""
 
     const prompt = `
-Create a Windsurf IDE prompt for implementing the following feature. Windsurf focuses on comprehensive project architecture, component design, and collaborative development.
+Create a Windsurf IDE prompt optimized for code generation. Windsurf works best with concise, specific instructions and clear technical requirements.
+
+${CODE_QUALITY_INSTRUCTION}
 
 ORIGINAL REQUIREMENT:
 ${requirement}
@@ -246,15 +253,14 @@ ANALYSIS RESULTS:
 • Acceptance Criteria: ${analysis.acceptanceCriteria.join(', ')}${questionsContext}${assumptionsContext}
 
 Generate a Windsurf-optimized prompt that includes:
-1. Project goal and scope
-2. Technical requirements and architecture
-3. Component breakdown and design patterns
-4. Implementation approach with detailed phases
-5. Security and performance considerations
-6. Testing and quality assurance strategy
-7. Documentation requirements
+1. Concise goal statement
+2. Technical specifications
+3. Implementation steps
+4. Key constraints and requirements
+5. Expected behavior description
+6. Code generation guidance
 
-Format as a comprehensive project brief that covers architecture, implementation strategy, and collaborative development considerations. Emphasize system design and best practices.`
+Format as a direct, actionable prompt that will help Windsurf generate accurate code suggestions. Keep it focused and specific.`
 
     return await aiService.generateResponse(prompt)
   }
@@ -276,6 +282,8 @@ Format as a comprehensive project brief that covers architecture, implementation
 
     const prompt = `
 Create a prompt optimized for ${ideType} IDE for implementing the following feature.
+
+${CODE_QUALITY_INSTRUCTION}
 
 ORIGINAL REQUIREMENT:
 ${requirement}
